@@ -7,6 +7,7 @@ namespace api.Repositories
     public interface IClientRepository
     {
         Task<Client[]> Get();
+        Task<Client[]> GetByFilter(string filter);
         Task Create(Client client);
         Task Update(Client client);
     }
@@ -31,6 +32,11 @@ namespace api.Repositories
             return dataContext.Clients.ToArrayAsync();
         }
 
+        public Task<Client[]> GetByFilter(string filter)
+        {
+            return dataContext.Clients.Where(c => c.FirstName.ToLower().Contains(filter) || c.LastName.ToLower().Contains(filter)).ToArrayAsync();
+        }
+
         public async Task Update(Client client)
         {
             var existingClient = await dataContext.Clients.FirstOrDefaultAsync(x => x.Id == client.Id);
@@ -45,6 +51,7 @@ namespace api.Repositories
 
             await dataContext.SaveChangesAsync();
         }
+
     }
 }
 

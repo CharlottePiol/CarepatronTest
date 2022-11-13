@@ -1,8 +1,17 @@
 ﻿using api.Data;
 using api.Repositories;
 using Microsoft.EntityFrameworkCore;
+using FluentValidation;
+using api.Models;
+using static Microsoft.AspNetCore.Http.Results;
+using FluentValidation.Validators;
+using api.Validator;
 
 var builder = WebApplication.CreateBuilder(args);
+// Add services to the container.
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddScoped<IValidator<Client>, ClientValidator>();
+builder.Services.AddScoped<IClientRepository, ClientRepository>();
 
 var services = builder.Services;
 
@@ -42,8 +51,37 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/clients", async (IClientRepository clientRepository) =>
 {
     return await clientRepository.Get();
-})
-.WithName("get clients");
+}).WithName("get clients");
+
+
+app.MapGet("/clients/filter={filter}",  async (string filter, IClientRepository clientRepository) =>
+{
+     return  await clientRepository.GetByFilter(filter);
+}).WithName("get clients by filter");
+
+
+app.MapPost("/clients", async (IValidator<Client> validator, IClientRepository repository, Client client) =>
+{
+    var validationResult = await validator.ValidateAsync(client);
+    if (!validationResult.IsValid)
+    {
+        return Results.ValidationProblem(validationResult.ToDictionary());
+    }
+    await repository.Create(client);
+    return Results.Created($"/{client.Id}", client);
+}).WithName("create client");
+
+
+app.MapPut("/clients/{id}", async (IValidator<Client> validator, IClientRepository repository, Client client) =>
+{
+    var validationResult = await validator.ValidateAsync(client);
+    if (!validationResult.IsValid)
+    {
+        return Results.ValidationProblem(validationResult.ToDictionary());
+    }
+    await repository.Update(client);
+    return Results.Created($"/{client.Id}", client);
+}).WithName("update client");
 
 app.UseCors();
 
